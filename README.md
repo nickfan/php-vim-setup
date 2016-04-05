@@ -33,13 +33,13 @@ This is my approach to transform vim into a full featured PHP IDE. It's only tes
 ### (optional) create a separate dir to organize git repositories
 
 ```
-$ mkdir ~/git && cd ~/git
+$ mkdir ~/vimset && cd ~/vimset
 ```
 
 ### Clone this repository
 ```
-$ git clone https://github.com/phux/php-vim-setup.git
-$ cd && ln -s ~/git/php-vim-setup/.vim* && ln -s ~/git/php-vim-setup/.gvimrc
+$ git clone https://github.com/nickfan/php-vim-setup.git ~/vimset
+$ ln -nfs ~/vimset/.vim ~/.vim && ln -nfs ~/vimset/.vimrc ~/.vimrc && ln -nfs ~/vimset/.gvimrc ~/.gvimrc
 ```
 
 ### Install plugins

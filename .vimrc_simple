@@ -1,0 +1,498 @@
+" Rainux's .vimrc file
+"
+" Maintainer:	Rainux <rainux@gmail.com>
+" Last change:	2008 Sep 26
+"
+" To use it, copy it to
+"     for Unix and OS/2:  ~/.vimrc
+"             for Amiga:  s:.vimrc
+"  for MS-DOS and Win32:  $HOME\.vimrc or $VIM\_vimrc
+"           for OpenVMS:  sys$login:.vimrc
+
+" ----------------------------------------------------------------------------
+" Multi-encoding setting, MUST BE IN THE BEGINNING OF .vimrc!
+"
+function! s:MultiEncodingSetting()
+  if has("multi_byte")
+    " When 'fileencodings' starts with 'ucs-bom', don't do this manually
+    "set bomb
+    set fileencodings=utf-8,ucs-bom,chinese,taiwan,japan,korea,latin1
+    " CJK environment detection and corresponding setting
+    if v:lang =~ "^zh_CN"
+      " Simplified Chinese, on Unix euc-cn, on MS-Windows cp936
+      set encoding=chinese
+      set termencoding=chinese
+      if &fileencoding == ''
+        set fileencoding=chinese
+      endif
+    elseif v:lang =~ "^zh_TW"
+      " Traditional Chinese, on Unix euc-tw, on MS-Windows cp950
+      set encoding=taiwan
+      set termencoding=taiwan
+      if &fileencoding == ''
+        set fileencoding=taiwan
+      endif
+    elseif v:lang =~ "^ja_JP"
+      " Japanese, on Unix euc-jp, on MS-Windows cp932
+      set encoding=japan
+      set termencoding=japan
+      if &fileencoding == ''
+        set fileencoding=japan
+      endif
+    elseif v:lang =~ "^ko"
+      " Korean on Unix euc-kr, on MS-Windows cp949
+      set encoding=korea
+      set termencoding=korea
+      if &fileencoding == ''
+        set fileencoding=korea
+      endif
+    endif
+     " Detect UTF-8 locale, and override CJK setting if needed
+    "if v:lang =~ "utf8$" || v:lang =~ "UTF-8$"
+      "set encoding=utf-8
+    "endif
+    set nobomb
+
+    "language chinese_china
+    set langmenu=chinese
+    set encoding=utf-8
+    set fileencoding=utf-8
+    set termencoding=utf-8
+  else
+    echoerr 'Sorry, this version of (g)Vim was not compiled with "multi_byte"'
+  endif
+endfunction
+
+
+" ----------------------------------------------------------------------------
+" Initialization
+" Commands only execute in Vim initialization
+"
+function! s:VimInit()
+  " Use Vim settings, rather then Vi settings (much better!).
+  " This must be first, because it changes other options as a side effect.
+  set nocompatible
+  call s:MultiEncodingSetting()
+  source $VIMRUNTIME/mswin.vim
+  behave xterm
+  " Restore CTRL-A to increase number instead of Select All
+  unmap! <C-A>
+  set ts=4
+  set shiftwidth=4
+  set softtabstop=4
+  
+endfunction
+
+" When Vim is starting, the winpos information is not available
+if getwinposx() == -1
+  call s:VimInit()
+endif
+
+" ----------------------------------------------------------------------------
+" Primary settings
+"
+
+" Backup only not in VMS and backup directory present
+if has("vms")
+  set nobackup		" do not keep a backup file, use versions instead
+else
+  if isdirectory("./.backup") || isdirectory($HOME . "/.backup")
+    set backup
+    set backupdir=./.backup,~/.backup
+  else
+    set nobackup
+  endif
+endif
+
+" Switch syntax highlighting on, when the terminal has colors
+" Also switch on highlighting the last used search pattern.
+if &t_Co > 2 || has("gui_running")
+  syntax on
+  set hlsearch
+endif
+
+" Only do this part when compiled with support for autocommands.
+if has("autocmd")
+
+  " Enable file type detection.
+  " Use the default filetype settings, so that mail gets 'tw' set to 72,
+  " 'cindent' is on in C files, etc.
+  " Also load indent files, to automatically do language-dependent indenting.
+  filetype plugin indent on
+
+  " Put these in an autocmd group, so that we can delete them easily.
+  augroup vimrcEx
+  au!
+
+  " For all text files set 'textwidth' to 78 characters.
+  autocmd FileType text setlocal textwidth=78
+  autocmd FileType html setlocal noexpandtab smarttab
+
+  " Change to directory of current file automatically
+  autocmd BufEnter *
+    \ if bufname("%") !~ 'http://' && bufname("%") !~ 'ftp://'  |
+    \   lcd %:p:h |
+    \ endif |
+
+  " When editing a file, always jump to the last known cursor position.
+  " Don't do it when the position is invalid or when inside an event handler
+  " (happens when dropping a file on gvim).
+  autocmd BufReadPost *
+    \ if line("'\"") > 0 && line("'\"") <= line("$") |
+    \   execute "normal g`\"" |
+    \ endif |
+
+  augroup END
+else
+  set autoindent  " always set autoindenting on
+endif " has("autocmd")
+
+
+" ----------------------------------------------------------------------------
+" My customizations
+"
+" Set options
+set backspace=indent,eol,start
+set noexpandtab
+set grepprg=grep\ -nH\ $*
+set helplang=CN
+set history=50
+set ignorecase smartcase
+set incsearch
+set laststatus=2
+set linebreak
+set list
+set wrap!
+set paste
+
+if v:version < 700
+  set listchars=tab:>-,trail:-
+else
+  set listchars=tab:>-,trail:-,nbsp:%
+endif
+set nonumber
+set ruler
+set sbr=>>
+set shellslash
+set showcmd
+set smartindent
+set viminfo=!,'1000,<100,c,f1,h,s10,rA:,rB:,n~/.viminfo
+set wildmenu
+
+set diffexpr=MyDiff()
+function! MyDiff()
+  let opt = ' -a --binary '
+  if &diffopt =~ 'icase' | let opt = opt . '-i ' | endif
+  if &diffopt =~ 'iwhite' | let opt = opt . '-b ' | endif
+  let arg1 = v:fname_in
+  if arg1 =~ ' ' | let arg1 = '"' . arg1 . '"' | endif
+  let arg2 = v:fname_new
+  if arg2 =~ ' ' | let arg2 = '"' . arg2 . '"' | endif
+  let arg3 = v:fname_out
+  if arg3 =~ ' ' | let arg3 = '"' . arg3 . '"' | endif
+  let diffprg = $VIMRUNTIME . "/diff"
+  if !executable(diffprg)
+    let diffprg = "diff"
+  endif
+  silent execute '!' . diffprg . opt . arg1 . ' ' . arg2 . ' > ' . arg3
+endfunction
+
+" Force read viminfo
+try
+  rviminfo ~/.viminfo
+catch
+endtry
+
+" GUI version settings
+if has("gui_running")
+  if has("gui_win32")
+    " Define a font list with corresponding winsize and winpos arguments list
+    " Note that Vim7 supports List type, use List to do this is more
+    " beautiful, but for compatibility with Vim6, we should use the follow
+    " method.
+    let s:GuiFont1 = "NSimSun:h11"
+    let s:GuiFont2 = "Courier_New:h12"
+    let s:GuiFont3 = "Bitstream_Vera_Sans_Mono:h11"
+    let s:GuiFont4 = "iMandysoft-CodeFont-III:h10"
+    let s:GuiFont5 = "Fixedsys:h11"
+    let s:GuiFont6 = "Lucida_Console:h11"
+    let s:GuiFont7 = "Terminal:h12:cGB2312"
+
+    let s:WinSize1 = "200 50"
+    let s:WinSize2 = "200 50"
+    let s:WinSize3 = "200 50"
+    let s:WinSize4 = "200 50"
+    let s:WinSize5 = "200 50"
+    let s:WinSize6 = "200 50"
+    let s:WinSize7 = "200 50"
+
+    let s:WinPos1 = "8 -4"
+    let s:WinPos2 = "10 -4"
+    let s:WinPos3 = "10 -4"
+    let s:WinPos4 = "6 -4"
+    let s:WinPos5 = "8 -4"
+    let s:WinPos6 = "10 -4"
+    let s:WinPos7 = "8 -4"
+
+    let s:FontsCount = 7
+
+    " Set default index to 1
+    if !exists("g:CUR_FONT_INDEX")
+      let g:CUR_FONT_INDEX = 1
+    elseif g:CUR_FONT_INDEX < 1 || g:CUR_FONT_INDEX > s:FontsCount
+      let g:CUR_FONT_INDEX = 1
+    endif
+
+    " Set GUI font by index
+    function! s:SetGuiFont(Index)
+      try
+        execute 'let s:CurGuiFont = s:GuiFont' . g:CUR_FONT_INDEX
+        execute 'set guifont=' . s:CurGuiFont
+      catch
+        return 1
+      endtry
+    endfunction
+
+    function! s:SetWinSize(Index)
+      execute 'let CurWinSize = s:WinSize' . g:CUR_FONT_INDEX
+      execute 'winsize ' . CurWinSize
+    endfunction
+
+    " Set window pos by index
+    function! s:SetWinPos(Index)
+      execute 'let s:CurWinPos = s:WinPos' . g:CUR_FONT_INDEX
+      let WinPosX = substitute(s:CurWinPos, '\(\S\+\)\( \)\(\S\+\)', '\1', '')
+      let WinPosY = substitute(s:CurWinPos, '\(\S\+\)\( \)\(\S\+\)', '\3', '')
+      if WinPosX != getwinposx() || WinPosY != getwinposy()
+        execute 'winpos ' . WinPosX . ' ' . WinPosY
+      endif
+    endfunction
+
+    " Initialize GUI font and window settings
+    call s:SetGuiFont(g:CUR_FONT_INDEX)
+    call s:SetWinSize(g:CUR_FONT_INDEX)
+    " Only effect when reload .vimrc
+    call s:SetWinPos(g:CUR_FONT_INDEX)
+    " Add to some event so they can auto execute when need
+    if has("autocmd")
+      autocmd GUIEnter * call s:SetWinPos(g:CUR_FONT_INDEX)
+      autocmd WinEnter * call s:SetWinPos(g:CUR_FONT_INDEX)
+    endif
+  endif
+else
+  " Console version settings
+  set background=dark
+endif
+
+exec("color evening")
+
+" Customizing some default highlight
+function! s:CustomHighlight()
+  if !exists("g:colors_name") || g:colors_name == "evening"
+    highlight LineNr gui=NONE guifg=#666666 guibg=#e8e8e8 cterm=NONE ctermfg=DarkGray ctermbg=LightGray
+    " Status line
+    highlight User1  gui=bold guifg=#000000 guibg=#f3f3f3 cterm=NONE ctermfg=Black    ctermbg=LightGray
+    highlight User2  gui=bold guifg=#888888 guibg=#f3f3f3 cterm=NONE ctermfg=DarkGray ctermbg=LightGray
+    highlight User3  gui=bold guifg=#0000ff guibg=#f3f3f3 cterm=NONE ctermfg=Blue     ctermbg=LightGray
+    highlight User4  gui=bold guifg=#ff0000 guibg=#f3f3f3 cterm=NONE ctermfg=Red      ctermbg=LightGray
+  endif
+endfunction
+
+call s:CustomHighlight()
+if has("autocmd")
+  autocmd CursorHold * call s:CustomHighlight()
+  autocmd FocusGained * call s:CustomHighlight()
+  autocmd VimEnter * call s:CustomHighlight()
+endif
+
+" Customizing status line
+function! CustomStatusLineBufSize()
+  let BufSize = line2byte(line("$") + 1) - 1
+  if BufSize < 0
+    let BufSize = 0
+  endif
+  " Add commas
+  let Remain = BufSize
+  let BufSize = ""
+  while strlen(Remain) > 3
+    let BufSize = "," . strpart(Remain, strlen(Remain) - 3) . BufSize
+    let Remain = strpart(Remain, 0, strlen(Remain) - 3)
+  endwhile
+  let BufSize = Remain . BufSize
+  let BufSize = BufSize . ' byte'
+  return BufSize
+endfunction
+
+if has("gui_running")
+  execute 'set statusline=%<%1*%f\ %h%m%r%2*\|' .
+    \ '%3*%{&ff}%2*:%3*%{&fenc}%2*:%3*%{&ft}%2*\|%{CustomStatusLineBufSize()}' .
+    \ '%=%b\ 0x%B\ \ \|' .
+    \ '%1*sts%2*:%3*%{&sts}%2*:%1*sw%2*:%3*%{&sw}%2*:' .
+    \ '%1*ts%2*:%3*%{&ts}%2*:%1*tw%2*:%3*%{&tw}%2*\|' .
+    \ '%06(%l%),%03(%v%)\ %1*%4.4P'
+else
+  execute 'set statusline=%<%1*%f\ %h%m%r%2*\|' .
+    \ '%3*%{&ff}%2*:%3*%{&fenc}%2*:%3*%{&ft}%2*\|%{CustomStatusLineBufSize()}' .
+    \ '%=%b\ 0x%B\ \ ' .
+    \ '%06(%l%),%03(%v%)\ %1*%4.4P'
+endif
+
+
+" ----------------------------------------------------------------------------
+" Key mappings
+"
+" Up & Down is display line upward & downward
+map <Up> gk
+map <Down> gj
+imap <Up> <Esc><Up>a
+imap <Down> <Esc><Down>a
+
+" F2 is Toggle wrap
+map <F2> :call <SID>ToggleGuiOption("b")<CR>:set wrap!<CR>
+imap <F2> <Esc><F2>a
+
+function! s:ToggleGuiOption(option)
+  " If a:option is already set in guioptions, then we want to remove it
+  if match(&guioptions, "\\C" . a:option) > -1
+    exec "set go-=" . a:option
+  else
+    exec "set go+=" . a:option
+  endif
+  if has("gui_win32")
+    call s:SetWinPos(g:CUR_FONT_INDEX)
+  endif
+endfunction
+
+" F3 is :NoHLSearch
+map <F3> :nohlsearch<CR>
+imap <F3> <Esc><F3>a
+
+" F4 is Toggle Mini Buffer Explorer
+map <F4> :TMiniBufExplorer<CR>
+imap <F4> <Esc><F3>a
+
+" F5 is Refresh Mini Buffer Explorer
+map <F5> :UMiniBufExplorer<CR>
+imap <F5> <Esc><F5>a
+
+" F6 is Hex view
+map <F6> :%!xxd<CR>
+imap <F6> <Esc><F6>a
+
+" F7 is Toggle spell check
+map <F7> :set spell!<CR>
+imap <F7> <Esc><F6>a
+
+" F8 is Change GUI font
+if has("gui_running")
+  map <F8> :call <SID>ChangeGuiFont(0)<CR>
+  map <S-F8> :call <SID>ChangeGuiFont(1)<CR>
+  imap <F8> <Esc><F8>a
+  imap <S-F8> <Esc><S-F8>a
+
+  function! s:ChangeGuiFont(Inverse)
+    let OldIndex = g:CUR_FONT_INDEX
+    if a:Inverse == 0
+      let g:CUR_FONT_INDEX = g:CUR_FONT_INDEX + 1
+      if g:CUR_FONT_INDEX > s:FontsCount
+        let g:CUR_FONT_INDEX = 1
+      endif
+    else
+      let g:CUR_FONT_INDEX = g:CUR_FONT_INDEX - 1
+      if g:CUR_FONT_INDEX < 1
+        let g:CUR_FONT_INDEX = s:FontsCount
+      endif
+    endif
+    " Here we use &tenc that set above to ensure the system locale
+    if s:SetGuiFont(g:CUR_FONT_INDEX) == 0
+      call s:SetWinSize(g:CUR_FONT_INDEX)
+      call s:SetWinPos(g:CUR_FONT_INDEX)
+      echo iconv("\rGUI font has changed to \"" .
+        \ s:CurGuiFont . '"', &tenc, &enc)
+    else
+      call s:SetWinSize(OldIndex)
+      call s:SetWinPos(OldIndex)
+      echo iconv("\rError changing GUI font. Maybe selected font \"" .
+        \ s:CurGuiFont . "\" not exists.", &tenc, &enc)
+    endif
+  endfunction
+endif
+
+" F9 is Compile and Run
+"map <F9> :!
+
+" CTRL-F9 is Compile
+map <C-F9> :make<CR>
+
+" CTRL-Tab is Next buffer
+map <C-Tab> :bnext!<CR>
+imap <C-Tab> <Esc>:bnext!<CR>
+cmap <C-Tab> <Esc>:bnext!<CR>
+
+" CTRL-SHIFT-Tab is Previous buffer
+map <C-S-Tab> :bNext!<CR>
+imap <C-S-Tab> <Esc>:bNext!<CR>
+cmap <C-S-Tab> <Esc>:bNext!<CR>
+
+" ,* is Substitute(Replace)
+nmap ,* :%s/<C-R><C-W>/
+
+" Make it easy to update/reload .vimrc
+nmap ,s :source $HOME/.vimrc<CR>
+nmap ,v :e $HOME/.vimrc<CR>
+
+" ,> ,< is next or prev error
+nmap ,> :cnext<CR>
+nmap ,< :cNext<CR>
+
+" Don't use Ex mode, use Q for formatting
+nmap Q gq
+
+
+" ----------------------------------------------------------------------------
+" Configurations for plugins
+"
+" Mini Buffer Explorer configurations
+let g:miniBufExplSplitBelow=1
+let g:miniBufExplMapWindowNavVim=1
+let g:miniBufExplMapWindowNavArrows=1
+let g:miniBufExplMapCTabSwitchBufs=1
+let g:miniBufExplModSelTarget=1
+
+
+" ----------------------------------------------------------------------------
+" Extra: Automatic update the "Last change" date of this file
+"
+function! s:VimrcUpdateLastChange()
+  let LineNr = search('^"\s*Last change:\s\+.*', 'nw')
+  let Line = getline(LineNr)
+  let Saved_Lang = v:lc_time
+  lang time C
+  let Time = strftime('%Y %b %d')
+  execute 'lang time ' . Saved_Lang
+  let Line = substitute(Line, '\(^"\s*Last change:\s\+\)\(.*$\)', '\1' .
+    \ Time, '')
+  call setline(LineNr, Line)
+endfunction
+
+if has("autocmd")
+  autocmd BufWritePre [._]vimrc call s:VimrcUpdateLastChange()
+endif
+
+function! s:UpdateLastChange()
+  let LineNr = search('^.*Last change:\s\+.*', 'nw')
+  let Line = getline(LineNr)
+  let Saved_Lang = v:lc_time
+  lang time C
+  let Time = strftime('%Y %b %d')
+  execute 'lang time ' . Saved_Lang
+  let Line = substitute(Line, '\(^.*Last change:\s\+\)\(.*$\)', '\1' .
+    \ Time, '')
+  call setline(LineNr, Line)
+endfunction
+
+if has("autocmd")
+  "autocmd BufWritePre * call s:UpdateLastChange()
+endif
+set noexpandtab
+" vim: sts=2 sw=2
